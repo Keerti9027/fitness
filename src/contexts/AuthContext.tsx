@@ -8,8 +8,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User>;
+  signUp: (email: string, password: string) => Promise<User>;
   signOut: () => Promise<void>;
 }
 
@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { password: _, ...userWithoutPassword } = user;
       setUser(userWithoutPassword);
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
+      return userWithoutPassword;
     },
     signUp: async (email: string, password: string) => {
       const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
@@ -67,6 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { password: _, ...userWithoutPassword } = newUser;
       setUser(userWithoutPassword);
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
+      return userWithoutPassword;
     },
     signOut: async () => {
       setUser(null);
