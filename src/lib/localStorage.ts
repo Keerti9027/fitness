@@ -11,6 +11,8 @@ export interface UserProfile {
   height?: number;
   weight?: number;
   goal?: string;
+  profilePhoto?: string;
+  galleryImages?: string[];
 }
 
 // Workout types

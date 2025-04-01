@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { storage } from '../lib/localStorage';
-import { User, Camera, Edit2, Award, Target, Save, X } from 'lucide-react';
+import { User, Camera, Edit2, Award, Target, Save, X, Plus, Trash2 } from 'lucide-react';
+import Modal from '../components/Modal';
+import ImageUpload from '../components/ImageUpload';
 
 interface ProfileFormData {
   fullName: string;
@@ -9,18 +11,23 @@ interface ProfileFormData {
   height: string;
   weight: string;
   goal: string;
+  profilePhoto?: string;
+  galleryImages: string[];
 }
 
 export default function Profile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(user ? storage.getUserProfile(user.id) : undefined);
   const [isEditing, setIsEditing] = useState(false);
+  const [showGalleryModal, setShowGalleryModal] = useState(false);
   const [formData, setFormData] = useState<ProfileFormData>({
     fullName: profile?.fullName || '',
     username: profile?.username || '',
     height: profile?.height?.toString() || '',
     weight: profile?.weight?.toString() || '',
-    goal: profile?.goal || ''
+    goal: profile?.goal || '',
+    profilePhoto: profile?.profilePhoto || '',
+    galleryImages: profile?.galleryImages || []
   });
 
   const achievements = [
@@ -38,7 +45,9 @@ export default function Profile() {
         username: userProfile?.username || '',
         height: userProfile?.height?.toString() || '',
         weight: userProfile?.weight?.toString() || '',
-        goal: userProfile?.goal || ''
+        goal: userProfile?.goal || '',
+        profilePhoto: userProfile?.profilePhoto || '',
+        galleryImages: userProfile?.galleryImages || []
       });
     }
   }, [user]);
@@ -60,7 +69,9 @@ export default function Profile() {
       username: formData.username,
       height: parseFloat(formData.height) || undefined,
       weight: parseFloat(formData.weight) || undefined,
-      goal: formData.goal
+      goal: formData.goal,
+      profilePhoto: formData.profilePhoto,
+      galleryImages: formData.galleryImages
     };
 
     storage.saveUserProfile(user.id, updatedProfile);
@@ -74,9 +85,43 @@ export default function Profile() {
       username: profile?.username || '',
       height: profile?.height?.toString() || '',
       weight: profile?.weight?.toString() || '',
-      goal: profile?.goal || ''
+      goal: profile?.goal || '',
+      profilePhoto: profile?.profilePhoto || '',
+      galleryImages: profile?.galleryImages || []
     });
     setIsEditing(false);
+  };
+
+  const handleProfilePhotoSelect = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setFormData(prev => ({
+        ...prev,
+        profilePhoto: base64String
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGalleryPhotoSelect = (file: File) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setFormData(prev => ({
+        ...prev,
+        galleryImages: [...prev.galleryImages, base64String]
+      }));
+      setShowGalleryModal(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      galleryImages: prev.galleryImages.filter((_, i) => i !== index)
+    }));
   };
 
   return (
@@ -86,12 +131,27 @@ export default function Profile() {
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-6">
               <div className="relative">
-                <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center">
-                  <User className="w-12 h-12" />
-                </div>
-                <button className="absolute bottom-0 right-0 bg-white p-2 rounded-full text-indigo-600 hover:bg-indigo-50 transition-colors">
-                  <Camera className="w-4 h-4" />
-                </button>
+                <ImageUpload
+                  onImageSelect={handleProfilePhotoSelect}
+                  className="w-24 h-24 bg-white/20 rounded-full overflow-hidden"
+                >
+                  {formData.profilePhoto ? (
+                    <img
+                      src={formData.profilePhoto}
+                      alt="Profile"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <User className="w-12 h-12" />
+                    </div>
+                  )}
+                </ImageUpload>
+                {isEditing && (
+                  <div className="absolute bottom-0 right-0 bg-white p-2 rounded-full text-indigo-600 hover:bg-indigo-50 transition-colors">
+                    <Camera className="w-4 h-4" />
+                  </div>
+                )}
               </div>
               <div>
                 <h1 className="text-3xl font-bold">{profile?.fullName || 'Your Name'}</h1>
@@ -219,6 +279,38 @@ export default function Profile() {
             </div>
 
             <div>
+              <div className="mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Gym Gallery</h2>
+                  <button
+                    onClick={() => setShowGalleryModal(true)}
+                    className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-indigo-700 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Photo</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {formData.galleryImages.map((image, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={image}
+                        alt={`Gallery ${index + 1}`}
+                        className="w-full h-40 object-cover rounded-lg"
+                      />
+                      {isEditing && (
+                        <button
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               <h2 className="text-xl font-semibold mb-4">Achievements</h2>
               <div className="space-y-4">
                 {achievements.map((achievement, index) => (
@@ -237,6 +329,22 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      <Modal
+        isOpen={showGalleryModal}
+        onClose={() => setShowGalleryModal(false)}
+        title="Add Photo to Gallery"
+      >
+        <div className="space-y-4">
+          <ImageUpload onImageSelect={handleGalleryPhotoSelect}>
+            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-indigo-500 transition-colors">
+              <Plus className="w-12 h-12 text-gray-400 mb-2" />
+              <p className="text-sm text-gray-600">Click to upload a photo</p>
+              <p className="text-xs text-gray-500 mt-1">JPG, PNG, GIF up to 10MB</p>
+            </div>
+          </ImageUpload>
+        </div>
+      </Modal>
     </div>
   );
 }
