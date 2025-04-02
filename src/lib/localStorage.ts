@@ -12,7 +12,31 @@ export interface UserProfile {
   weight?: number;
   goal?: string;
   profilePhoto?: string;
-  galleryImages?: string[];
+}
+
+// Health metrics types
+export interface HealthMetrics {
+  id: string;
+  userId: string;
+  heartRate: number;
+  bloodPressure: {
+    systolic: number;
+    diastolic: number;
+  };
+  oxygenLevel: number;
+  steps: number;
+  waterIntake: number;
+  date: string;
+}
+
+// Chat types
+export interface ChatMessage {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  content: string;
+  timestamp: string;
+  read: boolean;
 }
 
 // Workout types
@@ -75,6 +99,8 @@ const STORAGE_KEYS = {
   PROGRESS_LOGS: 'fitness_tracker_progress_logs',
   TODOS: 'fitness_tracker_todos',
   USER_PROFILES: 'fitness_tracker_user_profiles',
+  HEALTH_METRICS: 'fitness_tracker_health_metrics',
+  CHAT_MESSAGES: 'fitness_tracker_chat_messages',
 } as const;
 
 // Generic storage functions
@@ -89,7 +115,38 @@ function setStorageItem<T>(key: string, value: T[]): void {
 
 // Storage API
 export const storage = {
-  // Workout Plans
+  // Health Metrics
+  getHealthMetrics: (userId: string): HealthMetrics[] => {
+    return getStorageItem<HealthMetrics>(STORAGE_KEYS.HEALTH_METRICS)
+      .filter(metric => metric.userId === userId);
+  },
+
+  saveHealthMetrics: (metrics: HealthMetrics): void => {
+    const allMetrics = getStorageItem<HealthMetrics>(STORAGE_KEYS.HEALTH_METRICS);
+    const index = allMetrics.findIndex(m => m.id === metrics.id);
+    
+    if (index >= 0) {
+      allMetrics[index] = metrics;
+    } else {
+      allMetrics.push(metrics);
+    }
+    
+    setStorageItem(STORAGE_KEYS.HEALTH_METRICS, allMetrics);
+  },
+
+  // Chat Messages
+  getChatMessages: (userId: string): ChatMessage[] => {
+    return getStorageItem<ChatMessage>(STORAGE_KEYS.CHAT_MESSAGES)
+      .filter(msg => msg.senderId === userId || msg.receiverId === userId);
+  },
+
+  saveChatMessage: (message: ChatMessage): void => {
+    const messages = getStorageItem<ChatMessage>(STORAGE_KEYS.CHAT_MESSAGES);
+    messages.push(message);
+    setStorageItem(STORAGE_KEYS.CHAT_MESSAGES, messages);
+  },
+
+  // Existing methods
   getWorkoutPlans: (userId: string): WorkoutPlan[] => {
     return getStorageItem<WorkoutPlan>(STORAGE_KEYS.WORKOUT_PLANS)
       .filter(plan => plan.userId === userId);
@@ -108,7 +165,6 @@ export const storage = {
     setStorageItem(STORAGE_KEYS.WORKOUT_PLANS, plans);
   },
 
-  // Diet Logs
   getDietLogs: (userId: string): DietLog[] => {
     return getStorageItem<DietLog>(STORAGE_KEYS.DIET_LOGS)
       .filter(log => log.userId === userId);
@@ -120,7 +176,6 @@ export const storage = {
     setStorageItem(STORAGE_KEYS.DIET_LOGS, logs);
   },
 
-  // Progress Logs
   getProgressLogs: (userId: string): ProgressLog[] => {
     return getStorageItem<ProgressLog>(STORAGE_KEYS.PROGRESS_LOGS)
       .filter(log => log.userId === userId);
@@ -132,7 +187,6 @@ export const storage = {
     setStorageItem(STORAGE_KEYS.PROGRESS_LOGS, logs);
   },
 
-  // Todos
   getTodos: (userId: string): Todo[] => {
     return getStorageItem<Todo>(STORAGE_KEYS.TODOS)
       .filter(todo => todo.userId === userId);
@@ -151,7 +205,6 @@ export const storage = {
     setStorageItem(STORAGE_KEYS.TODOS, todos);
   },
 
-  // User Profile
   getUserProfile: (userId: string): UserProfile | undefined => {
     const profiles = getStorageItem<User>(STORAGE_KEYS.USER_PROFILES);
     return profiles.find(p => p.id === userId)?.profile;
@@ -168,5 +221,10 @@ export const storage = {
     }
     
     setStorageItem(STORAGE_KEYS.USER_PROFILES, profiles);
+  },
+
+  // Get all users for chat functionality
+  getAllUsers: (): User[] => {
+    return getStorageItem<User>(STORAGE_KEYS.USER_PROFILES);
   }
 };
